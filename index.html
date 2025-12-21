@@ -39,6 +39,59 @@
         <h2 id="pageTitle">探索熱門電影</h2>
 
         <section class="grid"></section>
+        <!-- Movie/TV Detail Modal -->
+        <div id="detailModal" class="modal hidden" aria-hidden="true">
+            <div class="modal-backdrop" data-close="1"></div>
+
+            <div class="modal-panel" role="dialog" aria-modal="true">
+                <button class="modal-x" id="detailClose" aria-label="Close">✕</button>
+
+                <div id="detailBody" class="modal-body">
+                    <!-- JS render -->
+                </div>
+            </div>
+        </div>
+        <!-- Review Modal -->
+        <div id="reviewModal" class="modal hidden" aria-hidden="true" data-close>
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reviewTitle" data-stop>
+                <button id="reviewClose" class="modal-x" aria-label="Close">×</button>
+
+                <h3 id="reviewTitle" style="margin:0 0 10px;">寫影評</h3>
+
+                <div class="review-form">
+                    <div class="review-row">
+                        <div class="review-label">片名</div>
+                        <div id="reviewMovieName" class="review-movie-name"></div>
+                    </div>
+
+                    <div class="review-row">
+                        <div class="review-label">評分</div>
+                        <div class="stars" id="reviewStars" aria-label="rating"></div>
+                        <div class="review-score" id="reviewScoreText">0 / 10</div>
+                    </div>
+
+                    <div class="review-row">
+                        <div class="review-label">內容</div>
+                        <textarea id="reviewContent" class="review-textarea" rows="6"
+                            placeholder="寫下你的心得..."></textarea>
+                    </div>
+
+                    <div class="review-row review-row-inline">
+                        <label class="review-check">
+                            <input type="checkbox" id="reviewPublic">
+                            <span>設為公開</span>
+                        </label>
+                    </div>
+
+                    <div class="review-actions">
+                        <button id="reviewCancel" class="btn ghost">取消</button>
+                        <button id="reviewSave" class="btn primary">儲存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
     </main>
     <script src="js/app.js"></script>
 

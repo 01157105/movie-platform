@@ -41,44 +41,75 @@ function toggleFavorite(movie) {
 // =====================
 // TMDB
 // =====================
-async function fetchTrending() {
-    try {
-        const type = mode === "tv" ? "tv" : "movie";
-        const url = `${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&language=zh-TW`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("HTTP " + res.status);
+async function fetchTrending({ page = 1, append = false } = {}) {
+  try {
+    if (listLoading) return;
+    listLoading = true;
 
-        const data = await res.json();
-        renderMixedResults(data.results || []);
-    } catch (err) {
-        console.error(err);
-        grid.innerHTML = `<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">
-      取得資料失敗：${err.message}
-    </div>`;
+    const type = mode === "tv" ? "tv" : "movie";
+    const url = `${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&language=zh-TW&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const data = await res.json();
+
+    // 更新是否還有下一頁（TMDB 有 total_pages）
+    listHasMore = page < (data.total_pages || 1);
+
+    // 渲染：append 或覆蓋
+    renderMixedResults(data.results || [], { append });
+
+    renderLoadMoreBar();
+  } catch (err) {
+    console.error(err);
+    if (!append) {
+      grid.innerHTML = `<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">
+        取得資料失敗：${err.message}
+      </div>`;
     }
+  } finally {
+    listLoading = false;
+    const btn = document.getElementById("btnLoadMore");
+    if (btn) btn.textContent = "載入更多";
+    if (btn) btn.disabled = false;
+  }
 }
 
 
-async function searchMedia(keyword) {
-    try {
-        const q = keyword.trim();
-        if (!q) return;
 
-        const url = `${BASE_URL}/search/${mode}?api_key=${API_KEY}&language=zh-TW&query=${encodeURIComponent(q)}&page=1`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error("HTTP " + res.status);
+async function searchMedia(keyword, { page = 1, append = false } = {}) {
+  try {
+    const q = (keyword || "").trim();
+    if (!q) return;
 
-        const data = await res.json();
-        renderMixedResults(data.results || []); // ✅ 統一用同一套卡片 UI
-    } catch (err) {
-        console.error(err);
-        grid.innerHTML = `
-      <div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">
+    if (listLoading) return;
+    listLoading = true;
+
+    const url = `${BASE_URL}/search/${mode}?api_key=${API_KEY}&language=zh-TW&query=${encodeURIComponent(q)}&page=${page}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+
+    const data = await res.json();
+
+    listHasMore = page < (data.total_pages || 1);
+
+    renderMixedResults(data.results || [], { append });
+    renderLoadMoreBar();
+  } catch (err) {
+    console.error(err);
+    if (!append) {
+      grid.innerHTML = `<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">
         搜尋失敗：${err.message}
-      </div>
-    `;
+      </div>`;
     }
+  } finally {
+    listLoading = false;
+    const btn = document.getElementById("btnLoadMore");
+    if (btn) btn.textContent = "載入更多";
+    if (btn) btn.disabled = false;
+  }
 }
+
 
 
 
@@ -102,19 +133,20 @@ async function searchAny(keyword) {
     }
 }
 
-function renderMixedResults(items) {
-    grid.innerHTML = "";
+function renderMixedResults(items, { append = false } = {}) {
+  if (!append) grid.innerHTML = "";
 
-    items.forEach(item => {
-        const poster = item.poster_path ? (IMAGE_BASE + item.poster_path) : "https://via.placeholder.com/300x450?text=No+Image";
-        const title = item.title || item.name || "(無標題)";
-        const date = item.release_date || item.first_air_date || "未知";
-        const voteNum = (typeof item.vote_average === "number") ? item.vote_average : null;
-        const score = (voteNum !== null) ? voteNum.toFixed(1) : "N/A";
+  items.forEach(item => {
+    const poster = item.poster_path ? (IMAGE_BASE + item.poster_path) : "https://via.placeholder.com/300x450?text=No+Image";
+    const title = item.title || item.name || "(無標題)";
+    const date = item.release_date || item.first_air_date || "未知";
+    const voteNum = (typeof item.vote_average === "number") ? item.vote_average : null;
+    const score = (voteNum !== null) ? voteNum.toFixed(1) : "N/A";
 
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
       <img src="${poster}" alt="${title}">
       <div class="p">
         <p class="t">${title}</p>
@@ -126,32 +158,84 @@ function renderMixedResults(items) {
       </div>
     `;
 
-        // fav
-        const favBtn = card.querySelector(".fav-btn");
-        favBtn.addEventListener("click", () => {
-            toggleFavorite({
-                id: item.id,
-                title,
-                poster: item.poster_path,
-                release_date: date,
-                vote: voteNum,
-                media_type: mode, // 加分：記錄是 movie / tv
-            });
-            favBtn.textContent = isFavorite(item.id) ? "💔 移除收藏" : "❤️ 加入收藏";
-        });
-
-        // review
-        card.querySelector(".review-btn").addEventListener("click", () => {
-            openReviewEditor({
-                id: item.id,
-                title,
-                poster: item.poster_path,
-                media_type: mode
-            });
-        });
-
-        grid.appendChild(card);
+    // 卡片點擊：開詳細（但按鈕要阻止冒泡）
+    card.addEventListener("click", async () => {
+      try {
+        detailBody.innerHTML = `<div style="padding:14px;">載入中...</div>`;
+        openModal();
+        const detail = await fetchDetail(mode, item.id);
+        renderDetail(detail, mode);
+      } catch (e) {
+        detailBody.innerHTML = `<div style="padding:14px;">載入失敗：${e.message}</div>`;
+      }
     });
+
+    // fav（要 stopPropagation，不然會同時開 modal）
+    const favBtn = card.querySelector(".fav-btn");
+    favBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleFavorite({
+        id: item.id,
+        title,
+        poster: item.poster_path,
+        release_date: date,
+        vote: voteNum,
+        media_type: mode,
+      });
+      favBtn.textContent = isFavorite(item.id) ? "💔 移除收藏" : "❤️ 加入收藏";
+    });
+
+    // review（也要 stopPropagation）
+    card.querySelector(".review-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      openReviewEditor({
+        id: item.id,
+        title,
+        poster: item.poster_path,
+        media_type: mode
+      });
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+
+function renderLoadMoreBar() {
+  // 先移除舊的
+  const old = document.getElementById("loadMoreBar");
+  if (old) old.remove();
+
+  // 沒有更多就不顯示
+  if (!listHasMore) return;
+
+  const bar = document.createElement("div");
+  bar.id = "loadMoreBar";
+  bar.className = "load-more-bar";
+  bar.innerHTML = `
+    <button id="btnLoadMore" class="load-more-btn" ${listLoading ? "disabled" : ""}>
+      ${listLoading ? "載入中..." : "載入更多"}
+    </button>
+  `;
+
+  // 放在 grid 後面
+  grid.insertAdjacentElement("afterend", bar);
+
+  document.getElementById("btnLoadMore").addEventListener("click", () => {
+    if (listLoading) return;
+    loadNextPage();
+  });
+}
+
+function loadNextPage() {
+  if (!listHasMore || listLoading) return;
+  listPage += 1;
+
+  if (currentPage === "explore") {
+    fetchTrending({ page: listPage, append: true });
+  } else if (currentPage === "search") {
+    searchMedia(lastQuery, { page: listPage, append: true });
+  }
 }
 
 
@@ -224,6 +308,15 @@ const pageTitle = document.getElementById("pageTitle");
 let currentPage = "explore";
 let mode = "movie"; // "movie" or "tv"
 let showPublicOnly = false;
+
+// =====================
+// Pagination state
+// =====================
+let listPage = 1;          // 目前第幾頁
+let listHasMore = true;    // 還有沒有下一頁
+let listLoading = false;   // 防連點
+let lastQuery = "";        // 搜尋關鍵字（search 用）
+
 
 document.querySelectorAll(".tab").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -313,12 +406,13 @@ function route() {
     if (searchBar) searchBar.classList.add("hidden");
     if (currentPage === "explore") {
         pageTitle.textContent = mode === "tv" ? "探索熱門影集" : "探索熱門電影";
-
+        listPage = 1;
+        listHasMore = true;
+        lastQuery = "";
+        fetchTrending({ page: 1, append: false });
         renderModeBar({
             note: "探索熱門電影 / 影集"
         });
-
-        fetchTrending();
         return;
     }
 
@@ -331,11 +425,13 @@ function route() {
     if (currentPage === "search") {
         pageTitle.textContent = "搜尋";
         searchBar.classList.remove("hidden");
-
+        listPage = 1;
+        listHasMore = true; 
+        lastQuery = "";
         renderModeBar({ note: "搜尋電影 / 影集" });
-
         updateSearchPlaceholder(); // ✅ 用同一套
-
+        const old = document.getElementById("loadMoreBar");
+        if (old) old.remove();
         grid.innerHTML = `
     <div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">
       請在上方輸入關鍵字後按「搜尋」。
@@ -530,6 +626,209 @@ function renderPublicWall() {
     });
 }
 
+// =====================
+// smartFetch (simple)
+// =====================
+async function smartFetch(url) {
+  console.log("[smartFetch] ready"); // ✅ 加這行
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res;
+}
+
+
+
+// =====================
+// Detail Modal
+// =====================
+const detailModal = document.getElementById("detailModal");
+const detailBody = document.getElementById("detailBody");
+const detailClose = document.getElementById("detailClose");
+
+function openModal() {
+    detailModal.classList.remove("hidden");
+    detailModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+}
+function closeModal() {
+    detailModal.classList.add("hidden");
+    detailModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+}
+detailClose?.addEventListener("click", closeModal);
+detailModal?.addEventListener("click", (e) => {
+    if (e.target?.dataset?.close) closeModal();
+});
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !detailModal.classList.contains("hidden")) closeModal();
+});
+
+async function fetchDetail(type, id) {
+    // type: "movie" or "tv"
+    const url = `${BASE_URL}/${type}/${id}?api_key=${API_KEY}&language=zh-TW&append_to_response=credits,videos`;
+    const res = await smartFetch(url);
+    return res.json();
+}
+
+function pickTrailerKey(videos) {
+  const list = videos?.results || [];
+  const yt = list.filter(v => v.site === "YouTube");
+
+  // 先挑 Official Trailer / Trailer / Teaser（依序）
+  const prefer = (re) =>
+    yt.find(v =>
+      (v.type && re.test(v.type)) ||
+      (v.name && re.test(v.name))
+    );
+
+  const officialTrailer =
+    yt.find(v => /official/i.test(v.name || "")) && prefer(/trailer/i);
+
+  const trailer = officialTrailer || prefer(/trailer/i) || prefer(/teaser/i) || yt[0];
+  return trailer?.key || "";
+}
+
+
+function renderDetail(detail, type) {
+    const title = detail.title || detail.name || "(無標題)";
+    const date = detail.release_date || detail.first_air_date || "未知";
+    const score = (typeof detail.vote_average === "number") ? detail.vote_average.toFixed(1) : "N/A";
+    const poster = detail.poster_path ? (IMAGE_BASE + detail.poster_path) : "https://via.placeholder.com/300x450?text=No+Image";
+    const overview = detail.overview || "（無簡介）";
+    const genres = (detail.genres || []).slice(0, 8).map(g => g.name);
+    const cast = (detail.credits?.cast || []).slice(0, 12).map(c => c.name);
+    const trailerKey = pickTrailerKey(detail.videos);
+
+    detailBody.innerHTML = `
+    <div class="detail-hero">
+      <img src="${poster}" alt="${title}">
+      <div>
+        <h3 style="margin:0 0 6px;">${title}</h3>
+        <div style="color:#666;font-size:13px;">${type.toUpperCase()} · ${date} · ⭐ ${score}</div>
+
+        <div class="badges">
+          ${genres.map(x => `<span class="badge">${x}</span>`).join("")}
+        </div>
+
+        <div class="detail-section">
+          <h4>簡介</h4>
+          <div style="white-space:pre-wrap;color:#333;line-height:1.6;">${overview}</div>
+        </div>
+
+        <div class="detail-section">
+          <h4>主要演員</h4>
+          <div class="cast-row">
+            ${cast.length ? cast.map(n => `<span class="cast-chip">${n}</span>`).join("") : `<span style="color:#666;font-size:13px;">（無資料）</span>`}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    ${trailerKey ? `
+      <div class="detail-section">
+        <h4>預告片</h4>
+        <iframe class="trailer" src="https://www.youtube.com/embed/${trailerKey}" allowfullscreen></iframe>
+      </div>
+    ` : ""}
+  `;
+}
+
+// =====================
+// Review Modal (new)
+// =====================
+const reviewModal = document.getElementById("reviewModal");
+const reviewClose = document.getElementById("reviewClose");
+const reviewCancel = document.getElementById("reviewCancel");
+const reviewSave = document.getElementById("reviewSave");
+
+const reviewMovieName = document.getElementById("reviewMovieName");
+const reviewStars = document.getElementById("reviewStars");
+const reviewScoreText = document.getElementById("reviewScoreText");
+const reviewContentEl = document.getElementById("reviewContent");
+const reviewPublicEl = document.getElementById("reviewPublic");
+
+// 暫存正在編輯的電影資訊
+let reviewDraft = {
+  id: null,
+  title: "",
+  poster: null,
+  media_type: "movie",
+  rating: 0
+};
+
+function openReviewModal() {
+  reviewModal.classList.remove("hidden");
+  reviewModal.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeReviewModal() {
+  reviewModal.classList.add("hidden");
+  reviewModal.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
+}
+
+reviewClose?.addEventListener("click", closeReviewModal);
+reviewCancel?.addEventListener("click", closeReviewModal);
+
+// 點遮罩關閉（外層有 data-close）
+reviewModal?.addEventListener("click", (e) => {
+  if (e.target?.dataset?.close) closeReviewModal();
+});
+
+// ESC 關閉（避免跟 detailModal 衝突：兩個都能關）
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !reviewModal.classList.contains("hidden")) {
+    closeReviewModal();
+  }
+});
+
+function setRating(val) {
+  reviewDraft.rating = val;
+  renderStars(val);
+  reviewScoreText.textContent = `${val} / 10`;
+}
+
+function renderStars(current) {
+  reviewStars.innerHTML = "";
+  for (let i = 1; i <= 10; i++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "star" + (i <= current ? " active" : "");
+    b.textContent = i <= current ? "★" : "☆";
+    b.setAttribute("aria-label", `rate ${i}`);
+    b.addEventListener("click", () => setRating(i));
+    reviewStars.appendChild(b);
+  }
+}
+
+reviewSave?.addEventListener("click", () => {
+  const rating = Number(reviewDraft.rating);
+  if (!Number.isFinite(rating) || rating < 1 || rating > 10) {
+    alert("評分必須是 1~10");
+    return;
+  }
+
+  const content = (reviewContentEl.value || "").trim();
+  const isPublic = !!reviewPublicEl.checked;
+
+  upsertReview({
+    id: reviewDraft.id,
+    title: reviewDraft.title,
+    poster: reviewDraft.poster,
+    rating,
+    content,
+    isPublic,
+    updatedAt: Date.now()
+  });
+
+  closeReviewModal();
+  alert("影評已儲存");
+
+  if (currentPage === "reviews") renderReviewsPage();
+  if (currentPage === "wall") renderPublicWall();
+});
+
 
 // =====================
 // Reviews (localStorage)
@@ -560,61 +859,57 @@ function deleteReview(id) {
 }
 
 function openReviewEditor(movieInfo) {
-    const existing = getReviewById(movieInfo.id);
+  const existing = getReviewById(movieInfo.id);
 
-    const ratingStr = prompt(
-        `請輸入評分（1~10）\n${movieInfo.title}`,
-        existing?.rating ?? "8"
-    );
-    if (ratingStr === null) return;
+  reviewDraft = {
+    id: movieInfo.id,
+    title: movieInfo.title,
+    poster: movieInfo.poster,
+    media_type: movieInfo.media_type || mode || "movie",
+    rating: existing?.rating ?? 8
+  };
 
-    const rating = Number(ratingStr);
-    if (!Number.isFinite(rating) || rating < 1 || rating > 10) {
-        alert("評分必須是 1~10 的數字");
-        return;
-    }
+  reviewMovieName.textContent = movieInfo.title || "(無標題)";
+  reviewContentEl.value = existing?.content ?? "";
+  reviewPublicEl.checked = existing?.isPublic ?? false;
 
-    const content = prompt(
-        `請輸入影評內容\n${movieInfo.title}`,
-        existing?.content ?? ""
-    );
-    if (content === null) return;
-
-    const isPublic = confirm("是否設為公開？\n（確定=公開 / 取消=私人）");
-
-    upsertReview({
-        id: movieInfo.id,
-        title: movieInfo.title,
-        poster: movieInfo.poster,
-        rating,
-        content,
-        isPublic,
-        updatedAt: Date.now()
-    });
-
-    alert("影評已儲存");
-
-    if (currentPage === "reviews") renderReviewsPage();
+  setRating(reviewDraft.rating);
+  openReviewModal();
 }
 
 
 
+
 btnSearch.addEventListener("click", () => {
-    pageTitle.textContent = "搜尋結果";
-    searchMedia(qEl.value);
+  pageTitle.textContent = "搜尋結果";
+  lastQuery = qEl.value.trim();
+  if (!lastQuery) return;
+
+  listPage = 1;
+  listHasMore = true;
+
+  const old = document.getElementById("loadMoreBar");
+  if (old) old.remove();
+
+  searchMedia(lastQuery, { page: 1, append: false });
 });
+
 
 qEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-        pageTitle.textContent = "搜尋結果";
-        searchMedia(qEl.value);
-    }
+  if (e.key === "Enter") {
+    pageTitle.textContent = "搜尋結果";
+    lastQuery = qEl.value.trim();
+    listPage = 1;
+    listHasMore = true;
+    searchMedia(lastQuery, { page: 1, append: false });
+  }
 });
 
+
 window.addEventListener("scroll", () => {
-  const topbar = document.querySelector(".topbar");
-  if (!topbar) return;
-  topbar.classList.toggle("scrolled", window.scrollY > 4);
+    const topbar = document.querySelector(".topbar");
+    if (!topbar) return;
+    topbar.classList.toggle("scrolled", window.scrollY > 4);
 });
 
 
