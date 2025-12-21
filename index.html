@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>電影評價 × 收藏平台</title>
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+    <!-- Header / Navigation -->
+    <header class="topbar">
+        <div class="brand">🎬 電影評價 × 收藏平台</div>
+
+        <nav class="nav">
+            <button class="tab active" data-page="explore">探索</button>
+            <button class="tab" data-page="search">搜尋</button>
+            <button class="tab" data-page="favorites">收藏</button>
+            <button class="tab" data-page="reviews">我的影評</button>
+            <button class="tab" data-page="wall">影評牆</button>
+            <button class="tab" data-page="about">關於</button>
+        </nav>
+
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        <section id="searchBar" class="searchbar hidden">
+            <div class="search-box">
+                <span class="search-icon" aria-hidden="true">🔍</span>
+                <input id="q" type="text" placeholder="搜尋電影或影集，例如：阿凡達" autocomplete="off" />
+                <button id="btnSearch" type="button">搜尋</button>
+            </div>
+        </section>
+
+
+        <h2 id="pageTitle">探索熱門電影</h2>
+
+        <section class="grid"></section>
+    </main>
+    <script src="js/app.js"></script>
+
+</body>
+
+</html>
