@@ -593,3 +593,35 @@ body {
   background: #111;
   color: #fff;
 }
+.about-card {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 600px;
+  line-height: 1.7;
+  margin: auto;
+}
+
+.about-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.about-link {
+  display: inline-block;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  text-decoration: none;
+  font-weight: 600;
+  color: #111;
+  transition: all .15s ease;
+}
+
+.about-link:hover {
+  background: #111;
+  color: #fff;
+}
