@@ -614,11 +614,21 @@ function route() {
         >
           📑 查看專案簡報（Canva）
         </a>
+
+        <a
+          href="https://www.canva.com/design/DAG8QFFia3U/tfmMfihMKpzekH2bO4nwhQ/edit?utm_content=DAG8QFFia3U&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton"
+          target="_blank"
+          rel="noopener"
+          class="about-link"
+        >
+          📄 查看說明文件（Canva）
+        </a>
       </div>
     </div>
-  `;
+    `;
         return;
     }
+
 
 }
 
