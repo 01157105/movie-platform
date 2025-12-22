@@ -8,7 +8,33 @@ const grid = document.querySelector(".grid");
 const searchBar = document.getElementById("searchBar");
 const qEl = document.getElementById("q");
 const btnSearch = document.getElementById("btnSearch");
+const GENRE_ZH_TW_FIX = {
+    28: "動作",
+    12: "冒險",
+    16: "動畫",
+    35: "喜劇",
+    80: "犯罪",
+    99: "紀錄片",
+    18: "劇情",
+    10751: "家庭",
+    14: "奇幻",
+    36: "歷史",
+    27: "恐怖",
+    10402: "音樂",
+    9648: "懸疑",
+    10749: "愛情",
+    878: "科幻",
+    10770: "電視電影",
+    53: "驚悚",
+    10752: "戰爭",
+    37: "西部",
 
+    10759: "動作冒險",
+    10765: "科幻奇幻",
+    10766: "肥皂劇",
+    10767: "談話節目",
+    10768: "戰爭政治"
+};
 // =====================
 // Favorites (localStorage)
 // =====================
@@ -349,7 +375,10 @@ async function renderGenreSelect() {
 
     select.innerHTML = `
       <option value="">全部分類</option>
-      ${genres.map(g => `<option value="${g.id}">${g.name}</option>`).join("")}
+      ${genres.map(g => {
+        const name = GENRE_ZH_TW_FIX[g.id] || g.name;
+        return `<option value="${g.id}">${name}</option>`;
+    }).join("")}
     `;
 
     select.value = currentGenre;
@@ -396,11 +425,11 @@ function renderModeBar({ note }) {
 
     document.getElementById("genreSelect")
         .addEventListener("change", (e) => {
-        currentGenre = e.target.value;
-        listPage = 1;
-        listHasMore = true;
-        fetchExploreByState();
-    });
+            currentGenre = e.target.value;
+            listPage = 1;
+            listHasMore = true;
+            fetchExploreByState();
+        });
 }
 
 function fetchExploreByState({ page = 1, append = false } = {}) {
