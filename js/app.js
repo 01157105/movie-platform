@@ -103,7 +103,17 @@ async function searchMedia(keyword, { page = 1, append = false } = {}) {
 }
 
 
+async function fetchGenres(type) {
+    if (genresCache[type]) return genresCache[type];
 
+    const url = `${BASE_URL}/genre/${type}/list?api_key=${API_KEY}&language=zh-TW`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch genres");
+
+    const data = await res.json();
+    genresCache[type] = data.genres || [];
+    return genresCache[type];
+}
 
 
 async function searchAny(keyword) {
@@ -227,7 +237,7 @@ function loadNextPage() {
     listPage += 1;
 
     if (currentPage === "explore") {
-        fetchTrending({ page: listPage, append: true });
+        fetchExploreByState({ page: listPage, append: true });
     } else if (currentPage === "search") {
         if (!lastQuery) return;
         searchMedia(lastQuery, { page: listPage, append: true });
@@ -305,6 +315,9 @@ let currentPage = "explore";
 let mode = "movie"; // "movie" or "tv"
 let showPublicOnly = false;
 
+let currentGenre = ""; // '' = All
+const genresCache = { movie: null, tv: null };
+
 // =====================
 // Pagination state
 // =====================
@@ -328,6 +341,20 @@ document.querySelectorAll(".tab").forEach(btn => {
     });
 });
 
+async function renderGenreSelect() {
+    const select = document.getElementById("genreSelect");
+    if (!select) return;
+
+    const genres = await fetchGenres(mode);
+
+    select.innerHTML = `
+      <option value="">全部分類</option>
+      ${genres.map(g => `<option value="${g.id}">${g.name}</option>`).join("")}
+    `;
+
+    select.value = currentGenre;
+}
+
 function renderModeBar({ note }) {
     const old = document.getElementById("modeBar");
     if (old) old.remove();
@@ -345,6 +372,9 @@ function renderModeBar({ note }) {
         影集 TV
       </button>
     </div>
+    <select id="genreSelect" class="genre-select">
+        <option value="">全部分類</option>
+    </select>
     <div class="mode-note">${note || ""}</div>
   `;
 
@@ -361,6 +391,46 @@ function renderModeBar({ note }) {
         mode = "tv";
         handleModeChange();
     });
+
+    renderGenreSelect();
+
+    document.getElementById("genreSelect")
+        .addEventListener("change", (e) => {
+        currentGenre = e.target.value;
+        listPage = 1;
+        listHasMore = true;
+        fetchExploreByState();
+    });
+}
+
+function fetchExploreByState({ page = 1, append = false } = {}) {
+    if (currentGenre) {
+        fetchByGenre({ page, append });
+    } else {
+        fetchTrending({ page, append });
+    }
+}
+
+async function fetchByGenre({ page = 1, append = false } = {}) {
+    try {
+        if (listLoading) return;
+        listLoading = true;
+        renderLoadMoreBar();
+
+        const url = `${BASE_URL}/discover/${mode}?api_key=${API_KEY}&language=zh-TW&with_genres=${currentGenre}&page=${page}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        const data = await res.json();
+        listHasMore = page < (data.total_pages || 1);
+
+        renderMixedResults(data.results || [], { append });
+    } catch (err) {
+        console.error(err);
+    } finally {
+        listLoading = false;
+        renderLoadMoreBar();
+    }
 }
 
 function updateSearchPlaceholder() {
@@ -428,7 +498,7 @@ function route() {
         listPage = 1;
         listHasMore = true;
         lastQuery = "";
-        fetchTrending({ page: 1, append: false });
+        fetchExploreByState({ page: 1, append: false });
         renderModeBar({
             note: "探索熱門電影 / 影集"
         });
