@@ -595,12 +595,31 @@ function route() {
 
     if (currentPage === "about") {
         pageTitle.textContent = "關於";
-        grid.innerHTML = `<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">
-      <h3>電影評價 × 收藏平台</h3>
-      <p>串接 TMDB API，提供探索、收藏與影評功能。</p>
-    </div>`;
+        grid.innerHTML = `
+    <div class="about-card">
+      <h3>🎬 電影評價 × 收藏平台</h3>
+
+      <p>
+        本專題串接 <strong>TMDB API</strong>，
+        提供電影 / 影集的探索、收藏與影評功能，
+        並實作分頁、Modal、Skeleton Loading 與狀態管理。
+      </p>
+
+      <div class="about-actions">
+        <a
+          href="https://www.canva.com/design/DAG8P9qw26Q/kS5cOPRtS5ES7X3FfpB5lQ/edit?ui=e30"
+          target="_blank"
+          rel="noopener"
+          class="about-link"
+        >
+          📑 查看專案簡報（Canva）
+        </a>
+      </div>
+    </div>
+  `;
         return;
     }
+
 }
 
 // 先做最簡收藏頁（Step 4 的一半）
