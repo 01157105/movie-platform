@@ -71,7 +71,7 @@ async function fetchTrending({ page = 1, append = false } = {}) {
     try {
         if (listLoading) return;
         listLoading = true;
-        renderLoadMoreBar(); // ✅ 立即把按鈕變成載入中/disabled
+        renderLoadMoreBar(); 
 
         const type = mode === "tv" ? "tv" : "movie";
         const url = `${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&language=zh-TW&page=${page}`;
