@@ -250,6 +250,13 @@ body {
   flex-wrap: wrap;
 }
 
+.genre-select{padding:8px 12px;
+  border-radius:999px;
+  border:1px solid #ddd;
+  background:#fff;
+  font-size:14px
+}
+
 .mode-pill {
   display: inline-flex;
   border: 1px solid #ddd;
