@@ -35,9 +35,7 @@ const GENRE_ZH_TW_FIX = {
     10767: "談話節目",
     10768: "戰爭政治"
 };
-// =====================
-// Favorites (localStorage)
-// =====================
+
 function getFavorites() {
     return JSON.parse(localStorage.getItem("favorites")) || [];
 }
@@ -64,9 +62,7 @@ function toggleFavorite(movie) {
     saveFavorites(favs);
 }
 
-// =====================
-// TMDB
-// =====================
+
 async function fetchTrending({ page = 1, append = false } = {}) {
     try {
         if (listLoading) return;
@@ -333,9 +329,7 @@ function renderMovies(movies) {
 }
 
 
-// =====================
-// Tabs routing
-// =====================
+
 const pageTitle = document.getElementById("pageTitle");
 let currentPage = "explore";
 let mode = "movie"; 
@@ -344,9 +338,7 @@ let showPublicOnly = false;
 let currentGenre = "";
 const genresCache = { movie: null, tv: null };
 
-// =====================
-// Pagination state
-// =====================
+
 let listPage = 1;          
 let listHasMore = true;    
 let listLoading = false;   
