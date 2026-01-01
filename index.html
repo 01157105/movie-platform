@@ -10,13 +10,11 @@
 
 <body>
 
-    <!-- Header / Navigation -->
     <header class="topbar">
         <div class="brand">🎬 電影評價 × 收藏平台</div>
 
         <nav class="nav">
             <button class="tab active" data-page="explore">探索</button>
-            <button class="tab" data-page="search">搜尋</button>
             <button class="tab" data-page="favorites">收藏</button>
             <button class="tab" data-page="reviews">我的影評</button>
             <button class="tab" data-page="wall">影評牆</button>
@@ -25,7 +23,6 @@
 
     </header>
 
-    <!-- Main Content -->
     <main class="container">
         <section id="searchBar" class="searchbar hidden">
             <div class="search-box">
@@ -47,11 +44,9 @@
                 <button class="modal-x" id="detailClose" aria-label="Close">✕</button>
 
                 <div id="detailBody" class="modal-body">
-                    <!-- JS render -->
                 </div>
             </div>
         </div>
-        <!-- Review Modal -->
         <div id="reviewModal" class="modal hidden" aria-hidden="true" data-close>
             <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="reviewTitle" data-stop>
                 <button id="reviewClose" class="modal-x" aria-label="Close">×</button>
