@@ -609,13 +609,13 @@ function route() {
         document.getElementById("btnExportJson").addEventListener("click", exportReviewsAsJson);
         document.getElementById("btnExportCsv").addEventListener("click", exportReviewsAsCsv);
         const fileInput = document.getElementById("fileImportReviews");
-        //const importLabel = fileInput?.parentElement; // 你用 label 包著 input
+        //const importLabel = fileInput?.parentElement; 
         //importLabel?.addEventListener("click", () => fileInput.click());
         fileInput.addEventListener("change", (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
             importReviewsFromJsonFile(file);
-            fileInput.value = ""; // 允許同一檔案重選
+            fileInput.value = ""; 
         });
         renderReviewsPage(document.getElementById("reviewsList"));
         return;
@@ -1072,9 +1072,6 @@ window.addEventListener("scroll", () => {
     topbar.classList.toggle("scrolled", window.scrollY > 4);
 });
 
-// =====================
-// Export / Import Reviews (localStorage)
-// =====================
 function downloadFile(filename, content, mime = "application/octet-stream") {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
@@ -1170,9 +1167,6 @@ function importReviewsFromJsonFile(file) {
     reader.readAsText(file, "utf-8");
 }
 
-// =====================
-// Export / Import Favorites (localStorage)
-// =====================
 function exportFavoritesAsJson() {
     const favs = getFavorites();
     const payload = {
@@ -1205,13 +1199,11 @@ function exportFavoritesAsCsv() {
         f.poster ?? ""
     ].map(escapeCsvCell).join(",")));
 
-    // ✅ 修 CSV 亂碼：加 UTF-8 BOM
     const csv = "\uFEFF" + [header.join(","), ...rows].join("\n");
     const filename = `favorites_export_${new Date().toISOString().slice(0, 10)}.csv`;
     downloadFile(filename, csv, "text/csv;charset=utf-8");
 }
 
-// 匯入 JSON（以 id 合併覆蓋）
 function importFavoritesFromJsonFile(file) {
     const reader = new FileReader();
     reader.onload = () => {
