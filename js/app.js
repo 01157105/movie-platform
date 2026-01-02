@@ -66,7 +66,7 @@ async function fetchTrending({ page = 1, append = false } = {}) {
     try {
         if (listLoading) return;
         listLoading = true;
-        renderLoadMoreBar(); 
+        renderLoadMoreBar();
 
         const type = mode === "tv" ? "tv" : "movie";
         const url = `${BASE_URL}/trending/${type}/week?api_key=${API_KEY}&language=zh-TW&page=${page}`;
@@ -86,7 +86,7 @@ async function fetchTrending({ page = 1, append = false } = {}) {
         }
     } finally {
         listLoading = false;
-        renderLoadMoreBar(); 
+        renderLoadMoreBar();
     }
 }
 
@@ -100,7 +100,7 @@ async function searchMedia(keyword, { page = 1, append = false } = {}) {
 
         if (listLoading) return;
         listLoading = true;
-        renderLoadMoreBar(); 
+        renderLoadMoreBar();
 
         const url = `${BASE_URL}/search/${mode}?api_key=${API_KEY}&language=zh-TW&query=${encodeURIComponent(q)}&page=${page}`;
         const res = await fetch(url);
@@ -119,7 +119,7 @@ async function searchMedia(keyword, { page = 1, append = false } = {}) {
         }
     } finally {
         listLoading = false;
-        renderLoadMoreBar(); 
+        renderLoadMoreBar();
     }
 }
 
@@ -226,7 +226,7 @@ function renderLoadMoreBar() {
     if (old) old.remove();
 
     if (!canShowLoadMore()) return;
-    if (!listHasMore && !listLoading) return; 
+    if (!listHasMore && !listLoading) return;
 
     const bar = document.createElement("div");
     bar.id = "loadMoreBar";
@@ -241,7 +241,7 @@ function renderLoadMoreBar() {
     grid.insertAdjacentElement("afterend", bar);
 
     const btn = document.getElementById("btnLoadMore");
-    btn.disabled = listLoading; 
+    btn.disabled = listLoading;
 
     btn.addEventListener("click", () => {
         if (listLoading) return;
@@ -327,17 +327,17 @@ function renderMovies(movies) {
 
 const pageTitle = document.getElementById("pageTitle");
 let currentPage = "explore";
-let mode = "movie"; 
+let mode = "movie";
 let showPublicOnly = false;
 
-let currentGenre = ""; 
+let currentGenre = "";
 const genresCache = { movie: null, tv: null };
 
-let listPage = 1;          
-let listHasMore = true;    
-let listLoading = false;   
-let lastQuery = "";        
-let isSearchMode = false;   
+let listPage = 1;
+let listHasMore = true;
+let listLoading = false;
+let lastQuery = "";
+let isSearchMode = false;
 
 function canShowLoadMore() {
     return currentPage === "explore" || currentPage === "search";
@@ -487,7 +487,7 @@ function handleModeChange() {
         listPage = 1;
         listHasMore = true;
         renderLoadMoreBar();
-        refreshList({ page: 1, append: false });  
+        refreshList({ page: 1, append: false });
         return;
     }
 
@@ -504,7 +504,7 @@ function handleModeChange() {
         if (q) {
             searchMedia(q, { page: 1, append: false });
         } else {
-            renderLoadMoreBar(); 
+            renderLoadMoreBar();
         }
         return;
     }
@@ -539,9 +539,40 @@ function route() {
 
     if (currentPage === "favorites") {
         pageTitle.textContent = "我的收藏";
-        renderFavoritesPage();
+
+        grid.innerHTML = `
+                <div class="reviews-layout">
+                    <aside class="reviews-side">
+                        <button id="btnFavExportJson" class="tab">匯出收藏 JSON</button>
+                        <button id="btnFavExportCsv" class="tab">匯出收藏 CSV</button>
+
+                        <label class="tab" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+                            匯入收藏 JSON
+                            <input id="fileImportFavs" type="file" accept="application/json" style="display:none;">
+                        </label>
+
+                        <div class="reviews-hint">提示：匯出可備份；匯入會以 id 合併覆蓋</div>
+                    </aside>
+
+                    <section id="favoritesList" class="reviews-list"></section>
+                </div>
+        `;
+
+        document.getElementById("btnFavExportJson").addEventListener("click", exportFavoritesAsJson);
+        document.getElementById("btnFavExportCsv").addEventListener("click", exportFavoritesAsCsv);
+
+        const fileInput = document.getElementById("fileImportFavs");
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            importFavoritesFromJsonFile(file);
+            fileInput.value = "";
+        });
+
+        renderFavoritesPage(document.getElementById("favoritesList"));
         return;
     }
+
 
 
     if (currentPage === "reviews") {
@@ -550,21 +581,42 @@ function route() {
         grid.innerHTML = `
             <div class="reviews-layout">
                 <aside class="reviews-side">
-                    <button id="togglePublic" class="tab reviews-toggle">
-                        ${showPublicOnly ? "✅ 只看公開：開" : "⬜ 只看公開：關"}
-                    </button>
-                    <div class="reviews-hint">提示：公開 / 私人是在寫影評時選擇</div>
+                <button id="togglePublic" class="tab reviews-toggle">
+                    ${showPublicOnly ? "✅ 只看公開：開" : "⬜ 只看公開：關"}
+                </button>
+
+                <div style="height:12px;"></div>
+
+                <button id="btnExportJson" class="tab">匯出 JSON</button>
+                <button id="btnExportCsv" class="tab">匯出 CSV</button>
+
+                <label class="tab" style="display:inline-flex;align-items:center;gap:8px;">
+                    匯入 JSON
+                    <input id="fileImportReviews" type="file" accept="application/json" style="display:none;">
+                </label>
+
+                    <div class="reviews-hint">提示：匯出可備份；匯入會以 id 合併覆蓋</div>
                 </aside>
 
                 <section id="reviewsList" class="reviews-list"></section>
-                </div>
-            `;
+            </div>
+        `;
 
         document.getElementById("togglePublic").addEventListener("click", () => {
             showPublicOnly = !showPublicOnly;
-            route(); 
+            route();
         });
-
+        document.getElementById("btnExportJson").addEventListener("click", exportReviewsAsJson);
+        document.getElementById("btnExportCsv").addEventListener("click", exportReviewsAsCsv);
+        const fileInput = document.getElementById("fileImportReviews");
+        //const importLabel = fileInput?.parentElement; // 你用 label 包著 input
+        //importLabel?.addEventListener("click", () => fileInput.click());
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            importReviewsFromJsonFile(file);
+            fileInput.value = ""; // 允許同一檔案重選
+        });
         renderReviewsPage(document.getElementById("reviewsList"));
         return;
     }
@@ -615,15 +667,15 @@ function route() {
 
 }
 
-function renderFavoritesPage() {
+function renderFavoritesPage(container = grid) {
     const favs = getFavorites();
 
     if (favs.length === 0) {
-        grid.innerHTML = `<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">目前沒有收藏。</div>`;
+        container.innerHTML = `<div style="padding:16px;background:#fff;border:1px solid #ddd;border-radius:14px;">目前沒有收藏。</div>`;
         return;
     }
 
-    grid.innerHTML = "";
+    container.innerHTML = "";
     favs.forEach(item => {
         const poster = item.poster
             ? (IMAGE_BASE + item.poster)
@@ -650,20 +702,22 @@ function renderFavoritesPage() {
 
         card.querySelector(".fav-btn").addEventListener("click", () => {
             toggleFavorite({ id: item.id });
-            renderFavoritesPage();
+            renderFavoritesPage(container);
         });
 
         card.querySelector(".review-btn").addEventListener("click", () => {
             openReviewEditor({
                 id: item.id,
                 title: item.title,
-                poster: item.poster
+                poster: item.poster,
+                media_type: item.media_type || "movie"
             });
         });
 
-        grid.appendChild(card);
+        container.appendChild(card);
     });
 }
+
 
 function renderReviewsPage(container = grid) {
     let reviews = getReviews().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
@@ -754,7 +808,7 @@ function renderPublicWall() {
 
 
 async function smartFetch(url) {
-    console.log("[smartFetch] ready"); 
+    console.log("[smartFetch] ready");
     const res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
     return res;
@@ -1017,6 +1071,178 @@ window.addEventListener("scroll", () => {
     if (!topbar) return;
     topbar.classList.toggle("scrolled", window.scrollY > 4);
 });
+
+// =====================
+// Export / Import Reviews (localStorage)
+// =====================
+function downloadFile(filename, content, mime = "application/octet-stream") {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+}
+
+function escapeCsvCell(val) {
+    const s = String(val ?? "");
+    if (/[,"\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+    return s;
+}
+
+function exportReviewsAsJson() {
+    const reviews = getReviews();
+    const payload = {
+        exportedAt: new Date().toISOString(),
+        count: reviews.length,
+        reviews
+    };
+    const filename = `reviews_export_${new Date().toISOString().slice(0, 10)}.json`;
+    downloadFile(filename, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+}
+
+function exportReviewsAsCsv() {
+    const reviews = getReviews();
+
+    const header = [
+        "id",
+        "title",
+        "rating",
+        "isPublic",
+        "updatedAt",
+        "updatedAtISO",
+        "content",
+        "poster"
+    ];
+
+    const rows = reviews.map(r => {
+        const updatedAtISO = r.updatedAt ? new Date(r.updatedAt).toISOString() : "";
+        return [
+            r.id,
+            r.title,
+            r.rating,
+            r.isPublic,
+            r.updatedAt ?? "",
+            updatedAtISO,
+            r.content ?? "",
+            r.poster ?? ""
+        ].map(escapeCsvCell).join(",");
+    });
+
+    const csvBody = [header.join(","), ...rows].join("\n");
+    const csvWithBom = "\uFEFF" + csvBody;
+    const filename = `reviews_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadFile(filename, csvWithBom, "text/csv;charset=utf-8");
+}
+
+function importReviewsFromJsonFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const data = JSON.parse(reader.result);
+            const incoming = Array.isArray(data) ? data : (data.reviews || []);
+            if (!Array.isArray(incoming)) throw new Error("JSON 格式不正確");
+
+            const current = getReviews();
+            const map = new Map(current.map(r => [r.id, r]));
+            incoming.forEach(r => {
+                if (!r || !r.id) return;
+                map.set(r.id, { ...map.get(r.id), ...r });
+            });
+
+            const merged = Array.from(map.values())
+                .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+            saveReviews(merged);
+            alert(`匯入完成：${incoming.length} 筆（合併後共 ${merged.length} 筆）`);
+
+            if (currentPage === "reviews") renderReviewsPage(document.getElementById("reviewsList"));
+            if (currentPage === "wall") renderPublicWall();
+        } catch (e) {
+            alert("匯入失敗：" + e.message);
+        }
+    };
+    reader.readAsText(file, "utf-8");
+}
+
+// =====================
+// Export / Import Favorites (localStorage)
+// =====================
+function exportFavoritesAsJson() {
+    const favs = getFavorites();
+    const payload = {
+        exportedAt: new Date().toISOString(),
+        count: favs.length,
+        favorites: favs
+    };
+    const filename = `favorites_export_${new Date().toISOString().slice(0, 10)}.json`;
+    downloadFile(filename, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+}
+
+function exportFavoritesAsCsv() {
+    const favs = getFavorites();
+
+    const header = [
+        "id",
+        "title",
+        "media_type",
+        "release_date",
+        "vote",
+        "poster"
+    ];
+
+    const rows = favs.map(f => ([
+        f.id ?? "",
+        f.title ?? "",
+        f.media_type ?? "",
+        f.release_date ?? "",
+        (typeof f.vote === "number" ? f.vote : ""),
+        f.poster ?? ""
+    ].map(escapeCsvCell).join(",")));
+
+    // ✅ 修 CSV 亂碼：加 UTF-8 BOM
+    const csv = "\uFEFF" + [header.join(","), ...rows].join("\n");
+    const filename = `favorites_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    downloadFile(filename, csv, "text/csv;charset=utf-8");
+}
+
+// 匯入 JSON（以 id 合併覆蓋）
+function importFavoritesFromJsonFile(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+        try {
+            const data = JSON.parse(reader.result);
+            const incoming = Array.isArray(data) ? data : (data.favorites || []);
+            if (!Array.isArray(incoming)) throw new Error("JSON 格式不正確");
+
+            const current = getFavorites();
+            const map = new Map(current.map(x => [x.id, x]));
+            incoming.forEach(x => {
+                if (!x || !x.id) return;
+                map.set(x.id, { ...map.get(x.id), ...x });
+            });
+
+            const merged = Array.from(map.values());
+            saveFavorites(merged);
+
+            alert(`匯入完成：${incoming.length} 筆（合併後共 ${merged.length} 筆）`);
+
+            if (currentPage === "favorites") {
+                const listEl = document.getElementById("favoritesList");
+                renderFavoritesPage(listEl || grid);
+            }
+
+        } catch (e) {
+            alert("匯入失敗：" + e.message);
+        }
+    };
+    reader.readAsText(file, "utf-8");
+}
 
 
 route();
